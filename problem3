@@ -1,0 +1,156 @@
+import numpy as np
+import pandas as pd
+import yfinance as yf
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, accuracy_score
+from prettytable import PrettyTable
+
+# Function to calculate daily returns
+def calculate_daily_returns(stock_data):
+    try:
+        stock_data['Daily Return'] = stock_data['Adj Close'].pct_change()
+        stock_data = stock_data.dropna()
+        return stock_data
+    except Exception as e:
+        print(f"Error calculating daily returns: {e}")
+        return None
+
+# Function to create lag features
+def create_lag_features(stock_data, num_days=5):
+    try:
+        for i in range(1, num_days + 1):
+            stock_data[f'lag_{i}'] = stock_data['Adj Close'].shift(i)
+        stock_data.dropna(inplace=True)
+        return stock_data
+    except Exception as e:
+        print(f"Error creating lag features: {e}")
+        return None
+
+# Function to train a Random Forest Regressor model
+def train_random_forest_model(X_train, y_train):
+    try:
+        model = RandomForestRegressor(n_estimators=200, max_depth=10, random_state=42)
+        model.fit(X_train, y_train)
+        return model
+    except Exception as e:
+        print(f"Error training the model: {e}")
+        return None
+
+# Function to evaluate the model
+def evaluate_model(stock_symbol, X_test, y_test, predictions, historical_data):
+    try:
+        # Evaluate the model
+        mse = mean_squared_error(y_test, predictions)
+        accuracy = accuracy_score(np.sign(y_test), np.sign(predictions))
+        error_margin = 1 - accuracy
+
+        # Visualize the stock prices, actual, and predicted
+        plt.figure(figsize=(12, 8))
+
+        # Plot historical stock prices
+        plt.subplot(2, 1, 1)
+        plt.plot(historical_data['Adj Close'], label='Adjusted Close Price')
+        plt.title(f'{stock_symbol} Stock Prices')
+        plt.xlabel('Date')
+        plt.ylabel('Stock Price (USD)')
+        plt.legend()
+
+        # Plot actual and predicted stock prices
+        plt.subplot(2, 1, 2)
+        plt.plot(y_test.index, y_test, color='blue', label='Actual Stock Price')
+        plt.plot(y_test.index, predictions, color='red', label='Predicted Stock Price')
+        plt.scatter(y_test.index, y_test, color='blue')  # Scatter points for actual
+        plt.scatter(y_test.index, predictions, color='red')  # Scatter points for predicted
+        plt.xlabel('Time')
+        plt.ylabel('Stock Price')
+        plt.legend()
+
+        # Display accuracy and error margin on the graph
+        plt.annotate(f'Accuracy: {accuracy * 100:.2f}%', xy=(0.05, 0.85), xycoords='axes fraction')
+        plt.annotate(f'Error Margin: {error_margin * 100:.2f}%', xy=(0.05, 0.80), xycoords='axes fraction')
+
+        plt.tight_layout()
+        plt.show()
+
+        return mse, accuracy
+
+    except Exception as e:
+        print(f"Error evaluating model for {stock_symbol}: {e}")
+        return None, None
+
+# Function to run Problem 1
+def run_problem_1(stock_symbol):
+    try:
+        stock_data = yf.download(stock_symbol, start='2020-01-01', end='2022-01-01')
+        if stock_data is None or stock_data.empty:
+            print(f"Error downloading data for {stock_symbol}")
+            return None, None, None
+
+        stock_data = calculate_daily_returns(stock_data)
+
+        for i in range(1, 11):
+            stock_data[f'lag_{i}'] = stock_data['Daily Return'].shift(i)
+
+        stock_data = create_lag_features(stock_data, num_days=5)
+
+        X = stock_data.drop(['Daily Return'], axis=1)
+        y = stock_data['Daily Return']
+
+        if X is not None and y is not None and len(X) > 0:
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+            model = train_random_forest_model(X_train, y_train)
+
+            if model is not None:
+                predictions, mse, accuracy = evaluate_model(stock_symbol, X_test, y_test, model.predict(X_test), stock_data)
+                return predictions, mse, accuracy
+
+    except Exception as e:
+        print(f"Error processing {stock_symbol}: {e}")
+
+    return None, None, None
+
+# Function to run Problem 2
+def run_problem_2(stock_symbols):
+    all_predictions = []
+    all_mse = []
+    all_accuracy = []
+
+    for stock_symbol in stock_symbols:
+        print(f"\nProcessing {stock_symbol}...")
+        predictions, mse, accuracy = run_problem_1(stock_symbol)
+
+        if predictions is not None:
+            all_predictions.append(predictions)
+            all_mse.append(mse)
+            all_accuracy.append(accuracy)
+
+    # Calculate the average of all the predicted data
+    if all_predictions:
+        average_predictions = np.mean(np.vstack(all_predictions), axis=0)
+        average_mse = np.mean(all_mse)
+        average_accuracy = np.mean(all_accuracy)
+
+        print(f'\nAverage Mean Squared Error for all stocks: {average_mse}')
+        print(f'Average Accuracy for all stocks: {average_accuracy * 100:.2f}%')
+
+        # Create a table to display results
+        result_table = PrettyTable()
+        result_table.field_names = ["Stock Symbol", "Average MSE", "Average Accuracy"]
+
+        for i, stock_symbol in enumerate(stock_symbols):
+            result_table.add_row([stock_symbol, all_mse[i], all_accuracy[i]])
+
+        print(result_table)
+
+# Define a list of top 50 unique stocks (remove duplicates)
+top_stocks_problem_2 = list(set(['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'FB', 'TSLA', 'NVDA', 'INTC', 'IBM', 'CSCO',
+              'V', 'PYPL', 'ADBE', 'CRM', 'QCOM', 'NFLX', 'GS', 'JPM', 'BA', 'MMM',
+              'WMT', 'HD', 'VZ', 'T', 'DIS', 'KO', 'PEP', 'Coca-Cola', 'XOM', 'PFE',
+              'JNJ', 'MRK', 'WFC', 'CVX', 'GOOG', 'GM', 'F', 'IBM', 'AMGN', 'GS', 'BA',
+              'C', 'CAT', 'CVX', 'DD', 'GE', 'HD', 'HPQ']))
+
+# Run Problem 2 for all stock symbols
+run_problem_2(top_stocks_problem_2)
