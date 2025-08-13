@@ -1,0 +1,23 @@
+This project predicts next-day stock price ranges for selected companies (e.g., AAPL, MSFT) using Yahoo Finance historical data and a Random Forest Regressor.
+
+Features:
+
+Downloads and preprocesses historical stock data via yfinance
+
+Creates lag-based features for time-series forecasting
+
+Trains and evaluates a Random Forest regression model
+
+Predicts next-day price range in USD, EUR, and INR
+
+Generates detailed performance reports (MSE, Accuracy)
+
+Plots historical prices vs. predicted returns
+
+Exports a formatted Word report with tables and charts
+
+Libraries Used:
+yfinance, numpy, pandas, scikit-learn, matplotlib, prettytable, python-docx
+
+Intended Use:
+For educational and experimental purposes. Not financial advice.
