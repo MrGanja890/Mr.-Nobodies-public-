@@ -46,3 +46,4 @@ flowchart TD
     D --> E[Random Forest Regressor]
     E --> F[Predict Next-Day Daily Return]
     F --> G[Convert to Next-Day Price Range in USD/EUR/INR]
+Author: Mr.Nobody890
